@@ -1,161 +1,152 @@
+# app.py
 
-import os, json, time, uuid, io, fitz, torch, torchvision.transforms as T
-from pathlib import Path
+import os
+import json
+import torch
+import torchvision.transforms as T
+import fitz  # PyMuPDF
 from PIL import Image
 import streamlit as st
-from transformers import AutoTokenizer, AutoModel
+from transformers import AutoTokenizer, AutoModelForCausalLM
 
-# ─── Paths ──────────────────────────────────────────────────────────────────
-BASE_DIR   = Path(__file__).parent
-STO_DIR    = BASE_DIR / "storage"
-FILE_DIR   = STO_DIR / "files"
-CHAT_DIR   = STO_DIR / "chats"
-META_PATH  = STO_DIR / "meta.json"
-MODEL_DIR  = "/home/ubuntu/models/Skywork-R1V2-38B"
+# ─── CONFIG ────────────────────────────────────────────────────────────────────
+MODEL_DIR    = "/home/ubuntu/models/Skywork-R1V2-38B"
+UPLOADS_DIR  = "uploads"
+META_FILE    = "metadata.json"
+CHAT_MAX_TOK = 1024
 
-# ─── Ensure folders ─────────────────────────────────────────────────────────
-for p in (FILE_DIR, CHAT_DIR):
-    p.mkdir(parents=True, exist_ok=True)
+# ─── HELPERS ───────────────────────────────────────────────────────────────────
 
-# ─── Simple metadata helpers ────────────────────────────────────────────────
-def load_meta():
-    if META_PATH.exists():
-        return json.loads(META_PATH.read_text())
-    return {"chat_ids": []}
-
-def save_meta(meta):
-    META_PATH.write_text(json.dumps(meta))
-
-meta = load_meta()
-
-# ─── Model (cached) ─────────────────────────────────────────────────────────
-@st.cache_resource(show_spinner=True, hash_funcs={torch.device: str})
-def load_skywork():
+@st.cache_resource
+def load_model_and_tokenizer():
     tok = AutoTokenizer.from_pretrained(MODEL_DIR, trust_remote_code=True)
-    model = AutoModel.from_pretrained(
+    model = AutoModelForCausalLM.from_pretrained(
         MODEL_DIR,
-        device_map="balanced_low_0",
-        torch_dtype=torch.float16,
         trust_remote_code=True,
+        device_map="balanced_low_0",
+        torch_dtype="auto"
     ).eval()
     return tok, model
 
-tok, model = load_skywork()
-
-# ─── Vision transform (same as reference) ───────────────────────────────────
-VISION_TX = T.Compose([
-    T.Resize((448, 448), interpolation=T.InterpolationMode.BICUBIC),
-    T.ToTensor(),
-    T.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5]),
-])
-
-# ─── PDF → tensor helper ────────────────────────────────────────────────────
-@st.cache_data(show_spinner=False)
-def pdf_to_tensor(pdf_path: Path):
-    doc = fitz.open(pdf_path)
-    tensors = []
+def pdf_page_to_tensor_fullres(path: str):
+    """
+    Render each page at the PDF's native resolution,
+    convert to a [1,3,H,W] bfloat16 CUDA tensor.
+    """
+    doc = fitz.open(path)
+    transform = T.Compose([
+        T.ToTensor(),
+        T.Normalize([0.5,0.5,0.5], [0.5,0.5,0.5])
+    ])
+    pages = []
     for page in doc:
-        pix = page.get_pixmap(matrix=fitz.Matrix(1, 1))
-        pil = Image.frombytes("RGB", (pix.width, pix.height), pix.samples).convert("RGB")
-        tensors.append(VISION_TX(pil))
-    return torch.stack(tensors).to(torch.float16)
+        pix = page.get_pixmap(matrix=fitz.Matrix(1.0, 1.0))
+        img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+        tensor = (
+            transform(img)
+            .unsqueeze(0)
+            .to(torch.bfloat16)
+            .cuda()
+        )
+        pages.append(tensor)
+    return pages
 
-# ─── Chat persistence helpers ───────────────────────────────────────────────
-def new_chat_id() -> str:
-    return uuid.uuid4().hex[:8]
+def load_metadata():
+    if os.path.exists(META_FILE):
+        with open(META_FILE, "r") as f:
+            return json.load(f)
+    return {"chats": []}
 
-def load_chat(chat_id: str):
-    p = CHAT_DIR / f"{chat_id}.json"
-    if p.exists():
-        return json.loads(p.read_text())
-    return {"title": None, "messages": [], "file_ids": []}
+def save_metadata(meta):
+    with open(META_FILE, "w") as f:
+        json.dump(meta, f, indent=2)
 
-def save_chat(chat_id: str, data):
-    (CHAT_DIR / f"{chat_id}.json").write_text(json.dumps(data))
+# ─── APP SETUP ────────────────────────────────────────────────────────────────
 
-# ─── Streamlit Session Setup ────────────────────────────────────────────────
-if "chat_id" not in st.session_state:
-    if meta["chat_ids"]:
-        st.session_state.chat_id = meta["chat_ids"][0]   # most recent
-    else:
-        st.session_state.chat_id = None
+st.set_page_config(layout="wide")
+tok, model = load_model_and_tokenizer()
+metadata   = load_metadata()
 
-# ─── Sidebar UI ─────────────────────────────────────────────────────────────
-with st.sidebar:
-    st.title("📄 PDF Chat")
-    uploaded_files = st.file_uploader("Upload PDFs", type="pdf", accept_multiple_files=True)
-    if uploaded_files:
-        # save files and register IDs
-        for f in uploaded_files:
-            fid = uuid.uuid4().hex[:8]
-            dest = FILE_DIR / f"{fid}_{f.name}"
-            dest.write_bytes(f.read())
-            if st.session_state.chat_id:
-                chat_data = load_chat(st.session_state.chat_id)
-                chat_data["file_ids"].append(fid)
-                save_chat(st.session_state.chat_id, chat_data)
+# Sidebar: Past conversations
+st.sidebar.header("📂 Past Conversations")
+for idx, chat in enumerate(metadata["chats"]):
+    title = chat.get("title") or f"Chat #{idx+1}"
+    if st.sidebar.button(title):
+        st.session_state.current = chat.copy()
+        st.session_state.idx = idx
 
-    # existing chats buttons
-    st.markdown("### Previous chats")
-    for cid in meta["chat_ids"]:
-        label = load_chat(cid)["title"] or cid
-        if st.button(label, key=f"chat_{cid}"):
-            st.session_state.chat_id = cid
+if "current" not in st.session_state:
+    st.session_state.current = {"title": "", "files": [], "history": []}
+    st.session_state.idx = None
 
-    if st.button("➕ New chat"):
-        new_id = new_chat_id()
-        meta["chat_ids"].insert(0, new_id)
-        save_meta(meta)
-        save_chat(new_id, {"title": None, "messages": [], "file_ids": []})
-        st.session_state.chat_id = new_id
+# Top‐level tabs
+tab_chat, tab_upload = st.tabs(["Chat", "Upload PDFs"])
 
-# no active chat → stop
-if st.session_state.chat_id is None:
-    st.stop()
+# ─── UPLOAD TAB ───────────────────────────────────────────────────────────────
+with tab_upload:
+    st.title("Upload PDF Documents")
+    uploaded = st.file_uploader("Choose PDF(s)", type="pdf", accept_multiple_files=True)
+    if uploaded:
+        os.makedirs(UPLOADS_DIR, exist_ok=True)
+        for f in uploaded:
+            path = os.path.join(UPLOADS_DIR, f.name)
+            with open(path, "wb") as out:
+                out.write(f.getbuffer())
+        st.success(f"Saved {len(uploaded)} file(s).")
+    if st.button("Go to Chat"):
+        st.experimental_rerun()
 
-chat_data = load_chat(st.session_state.chat_id)
+# ─── CHAT TAB ─────────────────────────────────────────────────────────────────
+with tab_chat:
+    st.title("📄 PDF-Powered Chat")
 
-# ─── Main Chat UI ───────────────────────────────────────────────────────────
-st.header(chat_data.get("title") or "Untitled chat")
+    # File selection
+    files = sorted(os.listdir(UPLOADS_DIR)) if os.path.isdir(UPLOADS_DIR) else []
+    chosen = st.multiselect(
+        "Select document(s) to include:",
+        files,
+        default=st.session_state.current["files"]
+    )
+    st.session_state.current["files"] = chosen
 
-# multiselect files attached to chat
-all_files = {p.stem.split("_",1)[0]: p for p in FILE_DIR.iterdir() if p.is_file()}
-file_options = [fid for fid in chat_data["file_ids"] if fid in all_files]
-selected_fids = st.multiselect("Select PDFs to include", file_options, default=file_options)
+    # Display history
+    for msg in st.session_state.current["history"]:
+        if msg["role"] == "user":
+            st.markdown(f"**You:** {msg['text']}")
+        else:
+            st.markdown(f"**Assistant:** {msg['text']}")
 
-# render previous messages
-for m in chat_data["messages"]:
-    with st.chat_message(m["role"]):
-        st.write(m["content"])
+    # New question
+    question = st.text_input("Ask a question:")
+    if st.button("Send") and question:
+        # 1️⃣ Record user message
+        st.session_state.current["history"].append({"role":"user","text":question})
+        st.markdown(f"**You:** {question}")
 
-user_q = st.chat_input("Ask your question…")
-if user_q:
-    # display user msg immediately
-    with st.chat_message("user"):
-        st.write(user_q)
-    chat_data["messages"].append({"role": "user", "content": user_q})
-    if chat_data["title"] is None:
-        chat_data["title"] = user_q[:40]
+        # 2️⃣ Build pixel_values (full-res pages)
+        tensors = []
+        for fn in chosen:
+            path = os.path.join(UPLOADS_DIR, fn)
+            tensors.extend(pdf_page_to_tensor_fullres(path))
+        pixel_values = torch.cat(tensors, dim=0) if tensors else None
 
-    # build vision tensor batch from selected PDFs
-    if selected_fids:
-        batches = [pdf_to_tensor(all_files[fid]) for fid in selected_fids]
-        pixel_values = torch.cat(batches, dim=0).cuda()
-        prompt = "\n" * pixel_values.shape[0] + user_q
-    else:
-        pixel_values = None
-        prompt = user_q
+        # 3️⃣ Inference via chat()
+        resp = model.chat(
+            tok,
+            pixel_values,
+            question,
+            generation_config={"max_new_tokens": CHAT_MAX_TOK}
+        )
+        assistant = resp["assistant"] if isinstance(resp, dict) else resp
 
-    # roll previous assistant / user turns into history text
-    history_text = "\n".join(m["content"] for m in chat_data["messages"] if m["role"] == "assistant")
+        # 4️⃣ Record & display assistant
+        st.session_state.current["history"].append({"role":"assistant","text":assistant})
+        st.markdown(f"**Assistant:** {assistant}")
 
-    full_prompt = (prompt if pixel_values is None else prompt)  # prompt already has newlines for images
-
-    with st.spinner("Generating…"):
-        answer = model.chat(tok, pixel_values, full_prompt, generation_config=dict(max_new_tokens=256))
-
-    chat_data["messages"].append({"role": "assistant", "content": answer})
-    save_chat(st.session_state.chat_id, chat_data)
-
-    with st.chat_message("assistant"):
-        st.write(answer)
+        # 5️⃣ Persist to metadata.json
+        if st.session_state.idx is None:
+            metadata["chats"].append(st.session_state.current)
+            st.session_state.idx = len(metadata["chats"]) - 1
+        else:
+            metadata["chats"][st.session_state.idx] = st.session_state.current
+        save_metadata(metadata)
