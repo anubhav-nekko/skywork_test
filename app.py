@@ -93,7 +93,7 @@ with st.sidebar:
                 cd = load_chat(st.session_state.chat_id)
                 cd["file_ids"].append(fid)
                 save_chat(st.session_state.chat_id, cd)
-        st.experimental_rerun()
+        st.rerun()
 
     st.markdown("### Previous Chats")
     for cid in meta["chat_ids"]:
@@ -107,7 +107,7 @@ with st.sidebar:
         save_meta(meta)
         save_chat(new_id, {"title": None, "messages": [], "file_ids": []})
         st.session_state.chat_id = new_id
-        st.experimental_rerun()
+        st.rerun()
 
 if st.session_state.chat_id is None:
     st.write("📭 Create or select a chat from the sidebar.")
