@@ -1,33 +1,25 @@
 from PIL import Image
-from transformers import (
-    AutoTokenizer,
-    AutoModelForCausalLM,
-    CLIPImageProcessor            # ← import the correct image processor
-)
+from transformers import AutoProcessor, AutoTokenizer, AutoModelForCausalLM
+import torch
 
 MODEL_DIR = "/home/ubuntu/models/Skywork-R1V2-38B"
 
-# 1️⃣ text objects
-tok   = AutoTokenizer.from_pretrained(MODEL_DIR, trust_remote_code=True)
-model = AutoModelForCausalLM.from_pretrained(
+tok     = AutoTokenizer.from_pretrained(MODEL_DIR, trust_remote_code=True)
+proc    = AutoProcessor.from_pretrained(MODEL_DIR,  trust_remote_code=True)
+model   = AutoModelForCausalLM.from_pretrained(
             MODEL_DIR,
-            device_map="balanced_low_0",     # 4 × 48 GB L40S
+            device_map="balanced_low_0",     # 4 × L40S
             torch_dtype="auto",
-            trust_remote_code=True           # loads SkyworkChatModel
-        ).eval()
+            trust_remote_code=True
+          ).eval()
 
-# 2️⃣ vision object
-image_proc = CLIPImageProcessor.from_pretrained(MODEL_DIR)  # the repo has a CLIP config
+img     = Image.open("cat.jpg").convert("RGB")
+prompt  = "What animal is this?"
 
-# 3️⃣ prepare one image
-img = Image.open("cat.jpg").convert("RGB")
-pixel_values = image_proc(images=img, return_tensors="pt").pixel_values.to("cuda:0")
+# 1️⃣  Build **joint** inputs – give BOTH image *and* text
+inputs = proc(images=[img], text=[prompt], return_tensors="pt")
+inputs = {k: v.to("cuda:0") for k, v in inputs.items()}        # move to GPU
 
-# 4️⃣ ask the multimodal model
-answer = model.chat(
-    tok,
-    pixel_values=pixel_values,
-    question="What animal is this?",
-    generation_config={"max_new_tokens": 1024}
-)
-print(answer)
+# 2️⃣  Generate
+output_ids = model.generate(**inputs, max_new_tokens=64)
+print(tok.decode(output_ids[0], skip_special_tokens=True))
