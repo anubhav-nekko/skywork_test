@@ -23,5 +23,5 @@ for p in doc:
 answer = model.chat(tok,
                     pixel_values=proc(images=pages, return_tensors="pt").pixel_values.to("cuda:0"),
                     question="Summarize the Main Allegations Against Sarda Ji",
-                    generation_config={"max_new_tokens":128})
+                    generation_config={"max_new_tokens":4096})
 print(answer)
