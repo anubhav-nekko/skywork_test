@@ -160,7 +160,7 @@ if q:
             tok,
             pixel_values,
             prompt,
-            generation_config={"max_new_tokens":256}
+            generation_config={"max_new_tokens":1024}
         )
     ans = resp["assistant"] if isinstance(resp, dict) else resp
 
