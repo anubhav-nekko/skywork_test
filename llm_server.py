@@ -21,7 +21,7 @@ def load_model():
     model = AutoModelForCausalLM.from_pretrained(
         MODEL_DIR,
         # device_map="auto",           # first visible GPU 
-        device_map="balanced_low_0",  # 4 × L40S shards   
+        device_map="balanced",  # 4 × L40S shards   
         torch_dtype="auto",
         trust_remote_code=True
     ).eval()

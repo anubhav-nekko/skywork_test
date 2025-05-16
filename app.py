@@ -2146,18 +2146,13 @@ def main():
 
 
             with st.spinner("Searching documents..."):
-                st.markdown("**While you wait, Feel free to Refer to the Original Documents or Play a Relaxing Game**")
+                st.markdown("**While you wait, Feel free to Refer to the Original Documents**")
 
                 for file_key in st.session_state.selected_files:
                     # Generate the pre-signed URL for each file
                     preview_url = get_presigned_url(file_key)
                     # Create a clickable markdown link; clicking it will open the file in a new tab
                     st.markdown(f"[**{file_key}**]({preview_url})", unsafe_allow_html=True)
-
-                st.markdown("[Play Space Galaga](http://43.204.44.226:5500/space.html)")
-                st.markdown("[Play Snake Game](http://43.204.44.226:5500/snake.html)")
-                st.markdown("[Play Atari Breakout](http://43.204.44.226:5500/atari.html)")
-                st.markdown("[Play Endless Runner](http://43.204.44.226:5500/surfer.html)")
 
 
                 top_k_metadata, answer, ws_response = query_documents_with_page_range(
