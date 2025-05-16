@@ -259,7 +259,8 @@ def load_skywork():
     tok = AutoTokenizer.from_pretrained(model_dir, trust_remote_code=True)
     model = AutoModelForCausalLM.from_pretrained(
         model_dir,
-        device_map="balanced_low_0",
+        # device_map="balanced_low_0",
+        device_map="auto",
         torch_dtype="auto",
         trust_remote_code=True
     ).eval()
