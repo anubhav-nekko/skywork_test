@@ -1977,6 +1977,7 @@ def main():
                     st.session_state.messages = conv.get('messages', [])
                     st.session_state.selected_files = conv.get('files', [])
                     st.session_state.selected_page_ranges = conv.get('page_ranges', {})
+                    st.session_state.current_conversation_id = conv_id
                     st.rerun()
                 if col2.button("✏️", key=f"rename_button_{conv_id}"):
                     st.session_state["rename_mode"] = conv_id
