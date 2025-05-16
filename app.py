@@ -251,20 +251,8 @@ from email.mime.text import MIMEText
 from openai import AzureOpenAI, OpenAI # type: ignore
 import copy
 import uuid
-from transformers import AutoModelForCausalLM, AutoTokenizer
 
-@st.cache_resource(show_spinner="Loading 38-B Skywork-R1V2 ⏳ …")
-def load_skywork():
-    model_dir = "/home/ubuntu/models/Skywork-R1V2-38B"
-    tok = AutoTokenizer.from_pretrained(model_dir, trust_remote_code=True)
-    model = AutoModelForCausalLM.from_pretrained(
-        model_dir,
-        # device_map="balanced_low_0",
-        device_map="auto",
-        torch_dtype="auto",
-        trust_remote_code=True
-    ).eval()
-    return tok, model
+BACKEND_URL = "http://localhost:8000/chat"      # or public IP / DNS
 
 if "Authenticator" not in st.session_state:
     st.session_state["Authenticator"] = None
@@ -487,14 +475,12 @@ def generate_titan_embeddings(text):
         return None  # Return None to handle errors gracefully
 
 def call_llm_api(system_message, user_query):
-    # Combine system and user messages
-    messages = system_message + user_query
-    tok, model = load_skywork()
     try:
-        answer = model.chat(tok, pixel_values=None,
-                            question=messages,
-                            generation_config={"max_new_tokens":16384})
-        return answer
+        payload = {"system": system_message, "user": user_query, "max_tokens": 16384}
+        r = requests.post(BACKEND_URL, json=payload, timeout=360)
+        r.raise_for_status()
+        return r.json()["answer"]
+    
     except Exception as e:
         return f"An error occurred: {str(e)}"
 

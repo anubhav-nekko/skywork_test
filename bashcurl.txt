@@ -1,0 +1,4 @@
+nvidia-smi   # confirm L40S with 48 GB memory is visible 
+curl -X POST http://localhost:8000/chat \
+     -H "Content-Type: application/json" \
+     -d '{"system":"You are a tester.","user":"ping"}'
