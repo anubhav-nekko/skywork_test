@@ -13,5 +13,5 @@ prompt = "Explain Newton's first law in two sentences."
 # **use the helper**; no pixel_values so text-only:
 answer = model.chat(tok, pixel_values=None,
                     question=prompt,
-                    generation_config={"max_new_tokens":1024})
+                    generation_config={"max_new_tokens":16384})
 print(answer)
