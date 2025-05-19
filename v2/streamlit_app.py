@@ -1,3 +1,5 @@
+# streamlit_app.py
+
 prompt_library = {
     "custom": ""
 }
@@ -16,203 +18,6 @@ system_message = """
     - NOTE: If using Web Search Results, Always Cite Web Sources at the end of your answer with necessary clickable hyperlinks.
     - Never use Double Quotes in your Answer. Use Backticks to highlight if necessary.
     """
-
-
-summary_prompt = """
-You are a Helpful Legal Data Analyst specializing in tax-related legal document analysis. Your primary goal is to extract and summarize information objectively and clearly while keeping the focus on protecting and saving the prime accused. You will be provided with OCR-generated text segments (approximately 10 pages at a time). Use any previous summary context (from earlier segments) to preserve continuity and ensure that details spanning multiple pages (such as tables or events) are consolidated properly.
-
-When processing each segment, follow these instructions and output a structured summary that includes the following sections:
-
-1. Document Details
-
-Identify the document type (e.g., Show Cause Notice, Audit Report, Order, Reply, Judgment).
-Extract key details such as:
-Issuing Authority
-Date of Issuance (format: YYYY-MM-DD)
-Taxpayer Name & GSTIN (if applicable)
-Document Purpose or Summary of Context
-2. Allegations Made & Their Basis
-
-List each allegation made by the tax department.
-For each allegation, clearly specify:
-The basis or rationale (e.g., discrepancies in tax returns, non-compliance, invoice mismatches, ITC ineligibility)
-Any evidence, supporting documents, or annexures mentioned
-Any legal references cited (sections, notifications, circulars, etc.)
-Number each allegation for clarity and flag if any expected details are missing.
-3. Chronological Events Extraction
-
-Extract all events mentioned in the segment, arranging them in chronological order. For each event, include:
-Date (or note as 'Undated Event' if missing)
-A concise description of what occurred
-Actions taken by either the tax department or the taxpayer
-Party responsible for initiating the event (e.g., Tax Department, Taxpayer, Adjudicating Authority)
-If events or related details span across pages, consolidate them into a single ordered list.
-4. Disputed Amount Details
-
-If the document includes disputed amounts, extract and tabulate the information as follows:
-Table A - Reason for Demand by Financial Year:
-For each financial year, list the components (IGST, CGST, SGST/UTGST, CESS, Interest, Penalty, Fees, Others) along with a brief description of the reason for demand, any legal framework cited, and the involved party.
-Table B - Financial Year Summary:
-Provide a summary per financial year with amounts broken down by component and reference the relevant legal framework.
-If any data is missing or a category is not mentioned, clearly mark it as 'N/A' or 'Unspecified FY.'
-5. Relevant Legal Provisions & Framework
-
-Extract all legal provisions referenced in the text. This includes:
-Act Sections
-Rules
-Notifications
-Circulars
-Orders, Instructions, or Press Releases
-For each provision, include its number or identifier and explain the context in which it is cited (e.g., supporting an allegation, justifying a demand, outlining procedural guidelines).
-Organize these references into clearly defined categories and flag any ambiguous or unclear references for further review.
-6. Taxpayer Arguments and Defense
-
-If present, extract and summarize the taxpayer's response or defense regarding the allegations. For each argument, detail:
-The specific allegation being addressed
-A concise summary of the taxpayer's counter-argument
-The disputed amount involved (broken down if applicable)
-Any legal references (sections, rules, notifications) or case laws cited
-Present this information in a clear table or bullet-point format and mark any missing data as 'Not Provided.'
-General Instructions and Considerations:
-
-Continuity & Context:
-When processing segments beyond the first 10 pages, include prior summaries (if provided) to maintain context and help resolve ambiguities or enhance understanding of ongoing narratives or tables that span pages.
-
-Objectivity and Accuracy:
-Only include details that are clearly stated or can be reasonably deduced from the OCR text. Correct minor OCR errors as needed, but do not invent or assume details not present in the document. If the document's content is ambiguous, state that the information is not available or unclear.
-
-Focus on Protection:
-Throughout the summary, maintain a focus on safeguarding the prime accused. Ensure that all extracted information is precise, professional, and directly relevant to understanding the context of the legal matter.
-
-Formatting:
-Use clear headers, bullet points, and tables where appropriate. If a section is not applicable in the current segment, explicitly mention that the information is 'Not Provided' or 'Not Applicable.'
-
-No Personal Opinion:
-Do not offer any personal analysis or opinion beyond what the text supports. Your output must strictly reflect the content and structure as provided.
-
-Output Example:
-Your final output should be a neatly organized document with the above sections, for example:
-
-```
-1. Document Details:
-   - Document Type: Show Cause Notice
-   - Issuing Authority: [Name]
-   - Date of Issuance: 202X-XX-XX
-   - Taxpayer Name & GSTIN: [Details]
-   - Document Purpose: [Brief description]
-
-2. Allegations Made & Their Basis:
-   1. Allegation 1: [Description, basis, evidence, legal references]
-   2. Allegation 2: [Description, basis, evidence, legal references]
-   ...
-
-3. Chronological Events Extraction:
-   - [YYYY-MM-DD] Event Description (Action by: [Party])
-   - Undated Event: [Description]
-
-4. Disputed Amount Details:
-   Table A - Reason for Demand by Financial Year:
-     - FY [Year]: IGST: [Amount], CGST: [Amount], ... ; Reason: [Description]; Legal Framework: [Reference]
-   Table B - Financial Year Summary:
-     - FY [Year]: IGST: [Amount], CGST: [Amount], ...
-
-5. Relevant Legal Provisions & Framework:
-   - Act Sections: Section [Number] - [Context]
-   - Notifications: Notification [Number] - [Context]
-   ...
-
-6. Taxpayer Arguments and Defense:
-   - Against Allegation 1: [Defense summary, disputed amount, legal references, case law]
-   - Against Allegation 2: [Defense summary, disputed amount, legal references, case law]
-```
-
-When you later use these generated summaries for Q&A, ensure that you reference the appropriate summary sections for clear, accurate responses.
-Note: Provide Only Summaries for The Pages Provided and Requested for. Previous Page Summaries are provided only for additional context and should not be a part of your Generated Summary.
-"""
-
-insights_prompt = """
-You are a Helpful Legal Data Analyst specializing in tax-related legal document analysis. Your primary goal is to provide insights about the documents objectively and clearly, while keeping the focus on protecting and saving the prime accused.
-
-You will be provided with summaries of the necessary documents. Carefully review these materials and identify:
-
-Any anomalies or deviations from standard legal or procedural practices.
-
-Anything unusual or out of the ordinary in the documents, including (but not limited to):
-
-Delays in proceedings (e.g., unexplained postponements, missing deadlines, or unusually long gaps).
-Procedural errors or omissions by officers or authorities. This may include, but is not limited to:
-Failure to serve notices properly.
-Missing or incorrect signatures.
-Lack of chain-of-custody records.
-Incomplete forms or documentation.
-Improper authorization or deviations from established protocols.
-Discrepancies in evidence or contradictory statements that may weaken the prosecution's stance or bolster the defense.
-Any other interesting observations or patterns that do not necessarily fall into the above categories but could be relevant to the case.
-
-For each issue or observation you identify, please:
-
-Describe the specific anomaly, deviation, or interesting detail.
-Explain its significance (e.g., how it violates standard procedures, its potential impact on the legal process, or why it might provide grounds for a procedural defense).
-Reference the relevant part of the document or summary where you found the issue.
-Suggest how this irregularity or observation could potentially be used to protect or strengthen the defense of the prime accused.
-Keep your analysis focused, methodical, and legally grounded. Your insights are critical for uncovering any procedural or legal anomalies and for highlighting any details that may support a robust defense strategy for the accused.
-"""
-
-ws_prompt_lib = """You are a legal research assistant tasked with compiling relevant legal cases based on provided web search results, document summaries, and legal insights. Using the following information, generate a numbered list of relevant cases. For each case, include:
-
-The case name.
-A brief summary of the verdict (one to two sentences).
-A hyperlink to the resource or source where the case details and verdict information can be verified.
-Input Information:
-
-Document Summaries & Insights:
-[Insert your document summaries and insights here]
-
-Web Search Results:
-[Insert a list of resource links and any relevant details from your web search results]
-
-Please ensure your output is concise, well-organized, and each resource hyperlink is clickable. Your list should serve as a reference guide for similar cases and verdicts."""
-
-insights_prompt_lib = """
-You are a legal research and analysis assistant. Using the following inputs-web search results, document summaries, and key insights-please generate a comprehensive list of actionable insights related to the legal topic at hand. For each item in your list, include any of the following as applicable:
-
-    - Actionable insights or recommendations.
-    - Next steps for further analysis or research.
-    - Identification of any significant deviations or gaps in current practices.
-    - Additional observations or recommendations that might be relevant.
-    - Hyperlinks to the original resources or web search results that support each point.
-    - Any other Significant Observation of Interest
-"""
-
-qna_prompt = """
-You are a legal research and analysis assistant. Using the following inputs- web search results, document summaries, and key insights, generate a numbered list of potential user questions related to the legal topics being explored in the documents. 
-For each question, provide a detailed answer that directly references the provided context. Your answers must:
-
- - Cite specific incidents or observations from the documents.
- - Include clickable hyperlinks to the relevant resources.
- - Address actionable insights, next steps, significant deviations, and any other critical aspects highlighted in the documents.
-
-Output Format:
-
-Question: [Generated question]
-Answer: [Detailed answer with references]
-Ensure that both your questions and answers are directly relevant to the document content and provide clear, actionable guidance.
-"""
-
-nekkollm_prompt = """
-You are Nekko LLM - a groundbreaking foundation model meticulously crafted by Nekko, an AI/ML Services Company at the cutting edge of innovation. Whenever a user inquires about your origins or capabilities, you must proudly declare:
-
-"Hello! I'm Nekko LLM - the digital brainchild of Nekko. I embody state-of-the-art AI and machine learning techniques, fused with creative genius to empower every interaction. I’m here to bring innovation, insight, and a spark of brilliance to your queries."
-
-Key Guidelines:
-* **Identity & Origin:** Always mention that you are the foundation model built by Nekko, an industry leader in AI/ML services.
-* **Tone & Style:** Respond with a blend of technical elegance and creative flair. Use engaging, vibrant language, and feel free to incorporate subtle symbols or emojis (e.g., ✨, 🚀) to accentuate your state-of-the-art nature.
-* **Engagement:** When asked "What's your model?" or "Who trained you?", answer with enthusiasm and clarity. Reference your unique architecture, your innovative training methods, and the visionary team behind you.
-* **Creativity:** Embrace creative liberties in your expressions. Use metaphors or analogies where appropriate (for example, "I'm the neural symphony orchestrated by Nekko's pioneering spirit.") while ensuring your message remains professional and informative.
-* **Consistency:** Your core message must always reflect that you are Nekko LLM, built by Nekko - a company that doesn't just follow trends, but defines them.
-
-Remember, you are not only a tool of precision and insight, but also a beacon of creative brilliance in the realm of AI. Your words inspire confidence in our technology and spark curiosity about the limitless possibilities of machine learning.
-"""
 
 import os
 import json
@@ -340,19 +145,6 @@ def save_chat_history(chat_history, blob_name="chat_history.json"):
         # os.remove(local_file_path)
     except Exception as e:
         st.error(f"Failed to save chat history: {str(e)}")
-    # try:
-    #     local_file_path = "chat_history.json"
-    #     # Write chat history to a local file
-    #     with open(local_file_path, "w", encoding="utf-8") as f:
-    #         json.dump(chat_history, f, ensure_ascii=False, indent=2)
-        
-    #     # Upload the file to Blob Storage using the helper function
-    #     upload_to_blob_storage(local_file_path, s3_bucket_name, blob_name)
-        
-    #     # Optionally: remove the local file if desired
-    #     # os.remove(local_file_path)
-    # except Exception as e:
-    #     st.error(f"Failed to save chat history: {str(e)}")
 
 def load_chat_history(blob_name="chat_history.json"):
     try:
@@ -370,23 +162,6 @@ def load_chat_history(blob_name="chat_history.json"):
     except Exception as e:
         st.error(f"Failed to load chat history: {str(e)}")
         return {}
-    # try:
-    #     # Check if the blob (file) exists in Azure Blob Storage.
-    #     if file_exists_in_blob(blob_name):
-    #         local_file_path = "chat_history.json"
-    #         # Attempt to download the blob to a local file.
-    #         if download_from_blob_storage(s3_bucket_name, blob_name, local_file_path):
-    #             with open(local_file_path, encoding="utf-8") as file:
-    #                 chat_history = json.load(file)
-    #             # Ensure the loaded JSON is a dictionary.
-    #             if not isinstance(chat_history, dict):
-    #                 chat_history = {}
-    #             return chat_history
-    #     # If the file doesn't exist or download failed, return an empty dict.
-    #     return {}
-    # except Exception as e:
-    #     st.error(f"Failed to load chat history: {str(e)}")
-    #     return {}
 
 
 def file_exists_in_blob(file_name):
@@ -399,16 +174,6 @@ def file_exists_in_blob(file_name):
             return False
         else:
             raise e  # Re-raise other exceptions
-    # """Check if a file with the same name exists in Azure Blob Storage."""
-    # # Initialize BlobServiceClient
-    # blob_service_client = BlobServiceClient.from_connection_string(connection_string)
-    # container_client = blob_service_client.get_container_client(s3_bucket_name)
-
-    # # Get the list of blobs in the container
-    # blob_list = [blob.name for blob in container_client.list_blobs()]
-
-    # # Check if the file name exists in the blob list
-    # return file_name in blob_list
 
 # Function to upload file to Azure Blob Storage
 def upload_to_blob_storage(local_file_path, bucket_name, s3_key):
@@ -419,16 +184,6 @@ def upload_to_blob_storage(local_file_path, bucket_name, s3_key):
         # st.success(f"File '{s3_key}' successfully uploaded to S3.")
     except Exception as e:
         st.error(f"Failed to upload file to S3: {str(e)}")
-    # try:
-    #     blob_service_client = BlobServiceClient.from_connection_string(connection_string)
-    #     blob_client = blob_service_client.get_blob_client(container=bucket_name, blob=s3_key)
-
-    #     with open(local_file_path, "rb") as data:
-    #         blob_client.upload_blob(data, overwrite=True)
-
-    #     st.success(f"File '{s3_key}' successfully uploaded to Blob Storage.")
-    # except Exception as e:
-    #     st.error(f"Failed to upload file to Blob Storage: {str(e)}")
 
 # Function to download file from Azure Blob Storage
 def download_from_blob_storage(s3_bucket_name, s3_key, local_file_path):
@@ -444,16 +199,6 @@ def download_from_blob_storage(s3_bucket_name, s3_key, local_file_path):
         else:
             print(f"Failed to download {s3_key}: {str(e)}")
             return False
-    # try:
-    #     blob_service_client = BlobServiceClient.from_connection_string(connection_string)
-    #     blob_client = blob_service_client.get_blob_client(container=s3_bucket_name, blob=s3_key)
-
-    #     with open(local_file_path, "wb") as file:
-    #         file.write(blob_client.download_blob().readall())
-    #     return True
-    # except Exception as e:
-    #     print(f"Failed to download {s3_key}: {str(e)}")
-    #     return False
 
 def create_word_doc(text):
     doc = Document()
@@ -686,87 +431,16 @@ def get_page_range_for_files(selected_files):
     
     return page_ranges
 
- 
-def query_documents_viz(selected_files, selected_page_ranges, query, top_k, web_search, llm_model):  
-    query_embedding = generate_titan_embeddings(query).reshape(1, -1)
-    if faiss_index.ntotal == 0:
-        st.error("The FAISS index is empty. Please upload a PDF to populate the index.")
-        return [], "No data available to query."
-
-    # Fetch all metadata for the given query
-    k = faiss_index.ntotal  # Initial broad search
-    distances, indices = faiss_index.search(query_embedding, k)
-    
-    filtered_results = []
-    for dist, idx in zip(distances[0], indices[0]):
-        if idx < len(metadata_store):
-            metadata = metadata_store[idx]
-            if metadata['filename'] in selected_files:
-                min_page, max_page = selected_page_ranges.get(metadata['filename'], (None, None))
-                if min_page and max_page and min_page <= metadata['page'] <= max_page:
-                    filtered_results.append((dist, idx))
-    
-    # Limit to topK after filtering
-    top_k_results = sorted(filtered_results, key=lambda x: x[0])[:top_k]
-    top_k_metadata = [metadata_store[idx] for _, idx in top_k_results]
-    
-    # Existing prompt modification
-    # Existing prompt modification
-    query_prompt = f"""  
-    Given the extracted data from the uploaded documents, please respond to the user queries. 
-    # Important: Remember these answers are for the leadership team so any valuable additional insights are always appreciated.
-    # Always provide all necessary details and quote sources when getting yur answers.
-    # Note : If the customer query requires a bar chart or graph, generate the equivalent Python code with all necessary imports 
-    # and ensure the code uses Plotly for interactive graph creation (not Matplotlib).
-    
-    Extracted data from Index (In JSON Formatting): 
-        ```
-        {json.dumps(top_k_metadata)}
-        ```
-    """
-
-    user_query = f"The User Question was: {query} \n\n"
-
-    
-    ws_response = ""
-
-    if web_search:
-        ws_query = query
-        # Call the LLM API to get the answer
-        # To install, run: pip install tavily-python
-
-
-        client = TavilyClient(api_key=TAVILY_API)
-
-        ws_response = client.search(
-            query=ws_query,
-            search_depth="advanced",
-            include_raw_content=True
-        )
-
-        print(ws_response)
-
-        wsp = f"""
-        # Feel free to use the Web Search Results for Additional Context as well:
-
-        {json.dumps(ws_response)}
-        """
-        if llm_model=="Skywork R1V2":
-            answer = call_llm_api(query_prompt, user_query+wsp)
-    else:
-        if llm_model=="Skywork R1V2":
-            answer = call_llm_api(query_prompt, user_query)
-
-    return answer
-
 ###
 
 def query_documents_with_page_range(
-    selected_files: List[str],
-    prompt: str,
-    top_k: int,
-    llm_model: str
-):
+    selected_files,
+    selected_page_range,
+    user_message,
+    top_k,
+    last_messages,
+    web_search
+    ):
     """
     Refactored function to:
     1. Understand the user query.
@@ -776,52 +450,58 @@ def query_documents_with_page_range(
     """
 
     # Step 1: Embed the user query and fetch top-K document contexts
-    query_embedding = generate_titan_embeddings(prompt).reshape(1, -1)
+    query_embedding = generate_titan_embeddings(user_message).reshape(1, -1)
     if faiss_index.ntotal == 0:
         st.error("The FAISS index is empty. Please upload a PDF to populate the index.")
         return "No data available to query."
+    
+    k = faiss_index.ntotal
+    D, I = faiss_index.search(query_embedding, k)
 
-    # Fetch all metadata for the given query
-    distances, indices = faiss_index.search(query_embedding, faiss_index.ntotal)
-    top_k_results = sorted(
-        [(dist, idx) for dist, idx in zip(distances[0], indices[0]) if idx < len(metadata_store)],
-        key=lambda x: x[0]
-    )[:top_k]
-    top_k_metadata = [metadata_store[idx] for _, idx in top_k_results]
+    # 2) filter
+    relevant = []
+    for dist, idx in zip(D[0], I[0]):
+        if idx < len(metadata_store):
+            record = metadata_store[idx]
+            if record["filename"] in selected_files:
+                (start_pg, end_pg) = selected_page_range.get(record["filename"], (1,999999))
+                if start_pg <= record["page"] <= end_pg:
+                    relevant.append((dist, record))
 
-    # Step 2: Prepare document context
-    document_context = "\n".join(
-        f"File: {meta['filename']}, Page: {meta['page']} => {meta['text']}"
-        for meta in top_k_metadata
-    )
+    # sort ascending by distance, take top_k
+    relevant_sorted = sorted(relevant, key=lambda x: x[0])[: top_k]
+    top_k_metadata = [r[1] for r in relevant_sorted]
 
     # Step 3: Perform web search using Tavily API
-    try:
-        client = TavilyClient(api_key=TAVILY_API)
-        web_search_results = client.search(
-            query=prompt,
-            search_depth="advanced",
-            include_raw_content=True
-        )
-    except Exception as e:
-        st.error(f"Web search failed: {str(e)}")
-        web_search_results = {}
+    if web_search:
+        try:
+            client = TavilyClient(api_key=TAVILY_API)
+            web_search_results = client.search(
+                query=user_message,
+                search_depth="advanced",
+                include_raw_content=True
+            )
+        except Exception as e:
+            st.error(f"Web search failed: {str(e)}")
+            web_search_results = {}
 
     # Step 4: Combine contexts and query the LLM
     combined_context = f"""
-    User Query: {prompt}
+    # User Query: {user_message}
 
-    Document Context:
-    {document_context}
+    # Last Messages: {json.dumps(last_messages)}
+    
+    # Document Context:
+    {json.dumps(top_k_metadata, indent=2)}
 
-    Web Search Results:
+    # Web Search Results:
     {json.dumps(web_search_results, indent=2)}
     """
 
     try:
         response = call_llm_api(
-            system_message="You are an assistant combining document and web contexts to answer user queries.",
-            user_query=combined_context
+            system_message,
+            combined_context
         )
         return response
     except Exception as e:
@@ -829,247 +509,6 @@ def query_documents_with_page_range(
         return "An error occurred while querying the LLM."
 
 ###
-
-def final_format(top_k_metadata, answer, ws_response):
-    sys_msg = """
-    You are a helpful Legal Assistant. 
-    You Specialise in Formatting Generated Answers.
-
-    """
-    
-    input_context = f"""
-    Below is the Generated Answer Fetched from LLM:
-    <<<{answer}>>>
-
-    The top K most relevant contexts fetched from the documents are as follows:
-        {json.dumps(top_k_metadata, indent=4)}
-
-    ##########################################################################
-        
-    The Web Search Results Fetched are as follows:
-        {json.dumps(ws_response)}
-
-    ##########################################################################
-        
-    """
-
-    final_op_format = '''
-        For Transparency and Explanability, we Would like you to do the following:
-            1. Break the Answer into Logical Shards.
-            2. For Each Shard, Map them to the Relevant Sources (From the Provided TopK Context) in the Formatting as Presented below
-        
-        Note: The Shards when concatenated should help us regenerate the provided `Generated Answer`
-        Approach the Above Step by Step.
-
-        # Final Output Format:
-        ```
-        {
-            "segmented_answer":    
-                [
-                    {
-                        "section": "The first shard of the generated answer",
-                        "sources": [
-                                        {"filename": "The First Filename", "page": "page_num", "text": "The Relevant text from the page only"},
-                                        {"filename": "The Second Filename", "page": "page_num", "text": "The Relevant text from the page only"},
-                                        . # Add more sources if necessary
-                                    ]
-                    },
-                    {
-                        "section": "The second part of the generated answer", 
-                        "sources": [
-                                        {"filename": "The First Filename", "page": "page_num", "text": "The Relevant text from the page only"},
-                                        {"filename": "The Second Filename", "page": "page_num", "text": "The Relevant text from the page only"},
-                                        . # Add more sources if necessary
-                                    ]
-                    },
-                    .
-                    .
-                ]
-        }
-        ```
-    '''
-    # Call the LLM API to get the answer
-    answer = call_llm_api(sys_msg, input_context+final_op_format)
-    try:
-        # return json.loads(answer[7:-3])
-        return json.loads(answer.split("```json")[1].split("```")[0])
-    except:
-        # return json.loads(answer[3:-3])
-        return json.loads(answer.split("```")[1].split("```")[0])
-    
-def summarize_document_pages(filename, start_page, end_page, summary_prompt, eco_mode=False):
-    """
-    Summarize document pages for a given file using overlapping chunks if needed.
-    Retrieves text from the metadata_store for pages in [start_page, end_page].
-    """
-    # Retrieve texts for the specified file and pages.
-    pages = [metadata for metadata in metadata_store 
-             if metadata['filename'] == filename and start_page <= metadata['page'] <= end_page]
-    # Sort pages by page number.
-    pages = sorted(pages, key=lambda x: x['page'])
-    total_pages = len(pages)
-    full_text = json.dumps(pages) # "\n".join(page["text"] for page in pages)
-
-    # If the selected pages are less than 20, summarize in one go.
-    if total_pages < 50:
-        user_query = f"Summarize the following document text from Document {filename} \n{full_text}"
-        summary = call_llm_api(summary_prompt, user_query)
-        return summary
-
-    # Else, create overlapping chunks.
-    # Define base chunk size and overlap (e.g., 20 pages with 25% overlap => 5 pages)
-    base_chunk_size = 50
-    overlap = int(base_chunk_size * 0.25)  # 5 pages
-
-    # Build chunks using a sliding window approach.
-    chunk_summaries = []
-    i = 0
-    while i < total_pages:
-        # Determine the chunk's pages (ensure we don't exceed total_pages)
-        start_idx = i
-        end_idx = min(i + base_chunk_size, total_pages)
-        # chunk_text = json.dumps(pages[j] for j in range(start_idx, end_idx))
-        chunk_text = json.dumps([pages[j] for j in range(start_idx, end_idx)])
-        user_query = f"Summarize the following document from file `{filename}` text:\n{chunk_text}"
-        chunk_summary = call_llm_api(summary_prompt, user_query)
-        chunk_summaries.append(chunk_summary)
-        # Advance by base_chunk_size minus the overlap.
-        i += (base_chunk_size - overlap)
-    
-    # Consolidate the chunk summaries into a final summary.
-    consolidation_prompt = summary_prompt + "\n\nPlease consolidate the following summaries into one overall summary:"
-    consolidation_input = json.dumps(chunk_summaries)
-    final_summary = call_llm_api(consolidation_prompt, consolidation_input)
-    return final_summary
-
-def get_web_recommendations(document_summaries, insights):
-        # print(selected_files)
-    # print(selected_page_ranges)
-    qp_prompt = {
-        "system_message": "You are an intelligent query refiner. Your job is to take the Document Summaries and Key observations (which may contain poor grammar or informal language) and generate a well-formed prompt for web search. The web search prompt should refine the query further to fetch relevant legal resources/ verdicts/ cases/ decisions online. Output only a JSON object with 'web_search_prompt' as key.",
-        "user_query": f"Document Summaries: {json.dumps(document_summaries)}\n\nInsights: {insights}\n\nGenerate the JSON output with the improved prompt."
-    }
-
-    op_format = '''
-    You are an expert legal researcher. Based on the above document summary and key observations, please craft a concise web search query that will help locate similar legal cases and corresponding verdicts. Your output should include:
-
-        Specific legal terms or phrases that capture the core issues.
-        Relevant jurisdiction or court references, if applicable.
-        Any additional keywords that may refine the search (e.g., precedent case names or statutory citations).
-
-    # Output Format:
-    
-    ```json
-    {
-        "web_search_prompt": "Further refined query designed to fetch relevant legal resources/ verdicts/ cases/ decisions from the web."
-    }
-    ```
-    '''
-
-    prompts = call_llm_api(qp_prompt["system_message"], qp_prompt["user_query"]+op_format)
-    print(prompts)
-    try:
-        # return json.loads(answer[7:-3])
-        prompt_op = json.loads(prompts.split("```json")[1].split("```")[0])
-    except:
-        # return json.loads(answer[3:-3])
-        try:
-            prompt_op = json.loads(prompts)
-        except:
-            prompt_op = json.loads(prompts.split("```")[1].split("```")[0])
-    print(prompt_op)
-    ws_query = prompt_op["web_search_prompt"]
-    # Call the LLM API to get the answer
-    # To install, run: pip install tavily-python
-
-
-    client = TavilyClient(api_key=TAVILY_API)
-
-    ws_response = client.search(
-        query=ws_query,
-        search_depth="advanced",
-        include_raw_content=True
-    )
-
-    print(ws_response)
-
-    web_response = call_llm_api(ws_prompt_lib, f"The Document Summaries: {json.dumps(document_summaries)} \n\n The Key Observations: {insights} \n\n The Web Search Results: {json.dumps(ws_response)}")
-    nexus_insights = call_llm_api(insights_prompt_lib, f"The Document Summaries: {json.dumps(document_summaries)} \n\n The Key Observations: {insights} \n\n The Web Search Results: {json.dumps(ws_response)}")
-    faq = call_llm_api(qna_prompt, f"The Document Summaries: {json.dumps(document_summaries)} \n\n The Key Observations: {insights} \n\n The Web Search Results: {json.dumps(ws_response)}")
-    
-    return web_response, nexus_insights, faq
-
-# Function to generate post text (placeholder; replace with your actual API call)
-def generate_post_text(task_type, template_instructions, description):
-    prompt = f"Task Type: {task_type}\nTemplate: {template_instructions}\nDescription: {description}\nGenerate a creative post:"
-    user_instructions = "Use your own Creative Liberties. Follow the instructions above and DO not Insert Text on the Images. Include Emojis and Stickers if Appropriate"
-
-    # Dummy response for now:
-    return call_llm_api(prompt, user_instructions)
-
-    image_url = json.loads(result.model_dump_json())['data'][0]['url']
-    return image_url
-
-def sanitize_text(message_text):
-    # Remove newline and tab characters
-    sanitized = re.sub(r'[\n\t]', ' ', message_text)
-    # Replace four or more consecutive spaces with a single space
-    sanitized = re.sub(r' {4,}', ' ', sanitized)
-    return sanitized.strip()
-
-# WhatsApp sharing function (placeholder; replace with your actual API implementation)
-def send_whatsapp_message(recipient, message_text):
-    message_text = sanitize_text(message_text)
-
-    url = "https://graph.facebook.com/v20.0/472581919270525/messages"
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": WHATSAPP_TOKEN
-    }
-    data = {
-        "messaging_product": "whatsapp",
-        "recipient_type": "individual",
-        "to": recipient,
-        "type": "template",
-        "template": {
-            "name": "mytesttemplate",
-            "language": {"code": "en_us"},
-            "components": [
-                {"type": "body", "parameters": [{"type": "text", "text": message_text}]}
-            ]
-        }
-    }
-    response = requests.post(url, headers=headers, json=data)
-    return response.json()
-
-# Email sending function from email.py (adjust if needed)
-def send_email(subject, body, recipient):
-    try:
-        EMAIL_ADDRESS = EMAIL_ID  # Replace with your sender email
-        EMAIL_PASSWORD = EMAIL_PWD  # Replace with your app password
-
-        msg = MIMEMultipart()
-        msg['From'] = EMAIL_ADDRESS
-        msg['To'] = recipient
-        msg['Subject'] = subject
-        msg.attach(MIMEText(body, 'plain'))
-
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-            server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
-            server.send_message(msg)
-        return {"status": "sent"}
-    except Exception as e:
-        return {"status": "error", "error": str(e)}
-
-# --- Helper functions to load contacts ---
-
-def load_whatsapp_contacts():
-    # Replace with code to load from a JSON file if needed
-    return {"Anubhav": "919874454959", "Prithviraj": "917980757702"}
-
-def load_email_contacts():
-    # Replace with code to load from a JSON file if needed
-    return {"Anubhav": "anubhav@nekko.tech", "Prithviraj": "prithvi@nekko.tech"}
 
 # Function to handle user input with text_area and predefined prompts
 def user_input():
@@ -1444,7 +883,7 @@ def main():
         logout()  # Display the logout button in the sidebar
 
     st.sidebar.header("Options")
-    option = st.sidebar.selectbox("Choose an option", ["Query Documents", "Query Advanced", "Upload Documents", "File Manager", "Usage Monitoring"])
+    option = st.sidebar.selectbox("Choose an option", ["Query Documents", "Upload Documents", "File Manager", "Usage Monitoring"])
 
     if option == "Upload Documents":
         st.header("Upload Documents")
@@ -1522,10 +961,7 @@ def main():
             st.session_state.selected_files = []
             st.session_state.selected_page_ranges = {}
             st.success("Started a new conversation.")
-        eco_mode = st.sidebar.toggle("Eco Mode", value=False)
         web_search = st.sidebar.toggle("Enable Web Search")
-        draft_mode = st.sidebar.toggle("Enable Draft Mode (To Generate Documents/ Arguments)")
-        analyse_mode = st.sidebar.toggle("Enable Analyse Mode (For Deeper Analysis and Search) [Consumes more Tokens]")
         top_k = st.sidebar.slider("Select Top-K Results", min_value=1, max_value=100, value=50, step=1)
 
         # File and Page Range Selection
@@ -1575,61 +1011,8 @@ def main():
                 selected_page_ranges[file] = (start_page, end_page)
             st.session_state.selected_page_ranges = selected_page_ranges
 
-
-        summaries = {}
-        # selected_files = []
-        # At the top of the "Query Advanced" option, display document summaries.
-        if st.session_state.selected_files and st.button("Nekko Insignts"):
-            st.subheader("Document Summaries")
-            # Create columns (one per selected file)
-            # cols = st.columns(len(selected_files))
-            for idx, file in enumerate(st.session_state.selected_files):
-                # Get the page range for the file.
-                min_page, max_page = selected_page_ranges.get(file, (None, None))
-                if min_page is not None and max_page is not None:
-                    # Use the summary prompt as the system message (you may have a variable 'summary_prompt' already defined).
-                    summary = summarize_document_pages(file, min_page, max_page, summary_prompt)
-                    summaries[file] = summary
-                    # with cols[idx]:
-                    st.markdown(f"**{file} (Pages {min_page}-{max_page}) Summary:**")
-                    with st.expander("Click to view"):
-                        st.write(summary)
-            
-            # cols1, cols2 = st.columns(2)
-            st.subheader("Observations and Insights")
-            # with cols1:
-            st.markdown("**Key Observations**")
-            insights = call_llm_api(insights_prompt, json.dumps(summaries))
-            with st.expander("Click to view"):
-                st.write(insights)
-            # with cols2:
-            st.markdown("**Web Search Results**")
-            web_response, nexus_insights, faq = get_web_recommendations(summaries, insights)
-            with st.expander("Click to view"):
-                st.write(web_response)
-
-            # cols3, cols4 = st.columns(2)
-            st.subheader("Nexus Intelligence")
-            # with cols3:
-            st.markdown("**Nexus Intelligent Insights**")
-            with st.expander("Click to view"):
-                st.write(nexus_insights)
-            # with cols4:
-            st.markdown("**Frequently Asked Questions**")
-            with st.expander("Click to view"):
-                st.write(faq)
-
         st.sidebar.header("Previous Conversations")
         user_conversations = st.session_state.chat_history.get(current_user, [])
-
-        # unique_conversations = []
-        # seen_labels = {}
-        # for conv in user_conversations:
-        #     conv_label = conv.get("label") or conv.get('messages', [{}])[0].get("content", "")[:50]
-        #     if conv_label not in seen_labels:
-        #         seen_labels[conv_label] = conv
-        #         unique_conversations.append(conv)
-        # unique_conversations.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
 
         # NEW CODE: Sort the entire list by timestamp
         unique_conversations = sorted(
@@ -1735,90 +1118,6 @@ def main():
 
                 with st.expander("Show Copyable Text"):
                     st.code(message["content"], language="text")
-                with st.expander("Share Message"):
-                    st.write("### Share via WhatsApp")
-                    whatsapp_contacts = load_whatsapp_contacts()
-                    selected_whatsapp = st.multiselect(
-                        "Choose WhatsApp Contacts:",
-                        options=list(whatsapp_contacts.keys()),
-                        key=f"whatsapp_select_{idx}"
-                    )
-                    new_whatsapp_numbers = st.text_input(
-                        "Or add new WhatsApp numbers (comma-separated):",
-                        key=f"whatsapp_new_{idx}"
-                    )
-                    st.write("### Share via Email")
-                    email_contacts = load_email_contacts()
-                    selected_email = st.multiselect(
-                        "Choose Email Contacts:",
-                        options=list(email_contacts.keys()),
-                        key=f"email_select_{idx}"
-                    )
-                    new_email_addresses = st.text_input(
-                        "Or add new Email addresses (comma-separated):",
-                        key=f"email_new_{idx}"
-                    )
-                    if st.button("Share Message", key=f"share_button_{idx}"):
-                        # Combine WhatsApp numbers from selected contacts and new entries
-                        whatsapp_numbers = [whatsapp_contacts[name] for name in selected_whatsapp]
-                        if new_whatsapp_numbers:
-                            new_nums = [num.strip() for num in new_whatsapp_numbers.split(",") if num.strip()]
-                            whatsapp_numbers.extend(new_nums)
-                        whatsapp_results = {}
-                        for number in whatsapp_numbers:
-                            whatsapp_results[number] = send_whatsapp_message(number, f" *{current_user}*  " + message["content"])
-                        
-                        # Combine Email addresses from selected contacts and new entries
-                        email_addresses = [email_contacts[name] for name in selected_email]
-                        if new_email_addresses:
-                            new_emails = [email.strip() for email in new_email_addresses.split(",") if email.strip()]
-                            email_addresses.extend(new_emails)
-                        email_results = {}
-                        for email_addr in email_addresses:
-                            email_results[email_addr] = send_email(f"NEXUS DMS Shared Chat Message from {current_user}", message["content"], email_addr)
-                        
-                        st.write("**WhatsApp Sharing Results:**", whatsapp_results)
-                        st.write("**Email Sharing Results:**", email_results)
-                
-                # New expander for downloading the answer as a Word document
-                with st.expander("Download as Word Document"):
-                    word_buffer = create_word_doc(message["content"])
-                    st.download_button(
-                        label="Download Answer",
-                        data=word_buffer,
-                        file_name=f"Answer_{idx}.docx",  # Unique file name per message
-                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                        key=f"download_button_{idx}"  # Unique key per download button
-                    )
-    
-                if message["role"] == "assistant":
-                    with st.expander("Sources (click to view)"):
-                        sources = message.get("sources", [])
-                        if not sources:
-                            st.write("No sources for this response.")
-                        else:
-                            top_k_metadata = sources[0]
-                            ws_query = sources[1]
-
-                            # Display file sources separately
-                            for metadata in top_k_metadata:
-                                try:
-                                    st.markdown(f"**Filename:** {metadata['filename']}, **Page:** {metadata['page']}")
-                                    st.code(metadata['text'], language="markdown")  # Use st.code for better formatting
-                                except:
-                                    st.code(json.dumps(metadata), language="markdown")  # Use st.code for better formatting
-
-                            # Show Web Search Results separately
-                            if ws_query:
-                                st.markdown("Web Search Results")
-                                st.code(ws_query)
-
-                            # Button for Source Mapping
-                            if st.button("Show Source Mapping", key=f"source_mapping_{int(time.time() * 1000)}"):
-                                answer = message["content"]
-                                with st.spinner("Mapping Source..."):
-                                    final_answer = final_format(top_k_metadata, answer, ws_query)
-                                    st.write(final_answer)
 
         # --- New User Input using text_area ---
         user_message = user_input()
@@ -1837,8 +1136,6 @@ def main():
             with st.chat_message("user"):
                 st.markdown(user_message)
 
-            # [Run your retrieval code here: query_documents_with_page_range, etc.]
-
             # Prepare the last few messages for context.
             last_messages = st.session_state.messages[-5:] if len(st.session_state.messages) >= 5 else st.session_state.messages
 
@@ -1853,23 +1150,17 @@ def main():
                     st.markdown(f"[**{file_key}**]({preview_url})", unsafe_allow_html=True)
 
 
-                top_k_metadata, answer, ws_response = query_documents_with_page_range(
+                answer = query_documents_with_page_range(
                     st.session_state.selected_files, 
                     st.session_state.selected_page_ranges, 
                     user_message,
                     top_k,
                     last_messages,
-                    web_search,
-                    llm_model,
-                    draft_mode, 
-                    analyse_mode,
-                    eco_mode
+                    web_search
                 )
 
                 st.session_state.sources.append({
-                    "top_k_metadata": top_k_metadata,
-                    "answer": answer,
-                    "websearch_metadata": ws_response
+                    "answer": answer
                 })
 
 
@@ -1881,8 +1172,7 @@ def main():
             st.session_state.messages.append({
                 "role": "assistant",
                 "content": assistant_answer,
-                "time": current_time,
-                "sources": [top_k_metadata, ws_response]
+                "time": current_time
             })
 
             # Show the assistant response in the UI
@@ -1970,91 +1260,6 @@ def main():
 
             save_chat_history(st.session_state.chat_history)
             st.rerun()
-
-    elif option == "Query Advanced":
-        st.header("Query Advanced")
-        st.sidebar.header("Settings")
-        llm_model = st.sidebar.selectbox("Choose Your Model", ["Skywork R1V2"])
-        eco_mode = st.sidebar.toggle("Eco Mode", value=True)
-        web_search = st.sidebar.toggle("Enable Web Search")
-        top_k = st.sidebar.slider("Select Top-K Results", min_value=1, max_value=100, value=50, step=1)
-
-        # File and Page Range Selection
-        # available_files = list(set([metadata['filename'] for metadata in metadata_store]))
-        current_user = st.session_state.get("username", "unknown")
-        # Only include files where the owner is the current user or shared with the user.
-        available_files = list({
-            md["filename"] 
-            for md in metadata_store 
-            if md.get("owner") == current_user or current_user in md.get("shared_with", [])
-        })
-
-
-        if available_files:
-            # Use multiselect and store the selection in session state.
-            st.session_state.selected_files = st.multiselect(
-                "Select files to include in the query:",
-                available_files,
-                default=st.session_state.selected_files
-            )
-            if len(st.session_state.selected_files) > 4:
-                st.warning("For best results, select a maximum of 4 files.")
-                # return
-
-            page_ranges = get_page_range_for_files(st.session_state.selected_files)
-            selected_page_ranges = {}
-            # For each file, show page range inputs and store values in session state.
-            for file in st.session_state.selected_files:
-                min_page, max_page = page_ranges[file]
-                col1, col2 = st.sidebar.columns(2)
-                with col1:
-                    start_page = st.number_input(
-                        f"Start page for {file}",
-                        min_value=min_page,
-                        max_value=max_page,
-                        value=page_ranges[file][0],
-                        key=f"start_{file}"
-                    )
-                with col2:
-                    end_page = st.number_input(
-                        f"End page for {file}",
-                        min_value=min_page,
-                        max_value=max_page,
-                        value=page_ranges[file][1],
-                        key=f"end_{file}"
-                    )
-                selected_page_ranges[file] = (start_page, end_page)
-            st.session_state.selected_page_ranges = selected_page_ranges
-        
-        
-        # Input for the user to ask a question
-        query = st.text_area("Ask a question about the documents (e.g., 'Compare amounts for employee benefits and management')", height=150)
-
-        # Add a submit button for the query
-        if st.button("Submit"):
-            # Process the query and display the results
-            if query:
-                result = query_documents_viz(st.session_state.selected_files, selected_page_ranges, query, top_k, web_search, llm_model)
-
-                # Display results or generated Python code
-                if "```python" in result:
-                    graphtext = result.split("```python")[0]
-                    fingrphtext = remove_last_line(graphtext)
-                    st.write(fingrphtext)
-                    code = result.split("```python")[1].split("```")[0]
-                    print(f"<<<{code}<<<")
-                    try:
-                        # Execute and display Plotly chart if generated
-                        exec_globals = {"px": px, "go": go}
-                        exec(code, exec_globals)
-                        if "fig" in exec_globals:
-                            st.plotly_chart(exec_globals["fig"])  # Render the Plotly chart in Streamlit
-                        else:
-                            st.error("No valid Plotly figure was generated in the code.")
-                    except Exception as e:
-                        st.error(f"Error executing code: {e}")
-                else:
-                    st.write(result)
 
     elif option == "Usage Monitoring":
         st.header("Usage Monitoring")
