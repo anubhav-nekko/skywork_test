@@ -56,6 +56,16 @@ from email.mime.text import MIMEText
 from openai import AzureOpenAI, OpenAI # type: ignore
 import copy
 import uuid
+import tiktoken
+ENC = tiktoken.get_encoding("cl100k_base")   # ≈Qwen vocab, fast :contentReference[oaicite:2]{index=2}
+CTX_LIMIT = 40_960
+
+def n_tokens(text: str) -> int:
+    return len(ENC.encode(text))
+
+def used_tokens(msgs, rag_context):
+    chat_tokens = sum(n_tokens(m["content"]) for m in msgs)
+    return chat_tokens + n_tokens(rag_context)
 
 BACKEND_URL = "http://127.0.0.1:8000/chat"      # or public IP / DNS
 
@@ -113,12 +123,12 @@ METADATA_STORE_PATH = "metadata_store.pkl"
 s3_bucket_name = "skyworkllm"
 
 # Users File Path 
-users_file = "../users.json"
+users_file = "../../users.json"
 
 # Define a helper function to display your company logo
 def display_logo():
     # Make sure 'logo.png' is in your working directory
-    st.image("logo.png", width=150)
+    st.image("../logo.png", width=150)
 
 # Create a Textract Runtime client for document analysis
 textract_client = boto3.client('textract', region_name=REGION)
@@ -493,10 +503,21 @@ def query_documents_with_page_range(
     
     # Document Context:
     {json.dumps(top_k_metadata, indent=2)}
-
-    # Web Search Results:
-    {json.dumps(web_search_results, indent=2)}
     """
+
+    if web_search:
+        combined_context += f"""
+        # Web Search Results:
+        {json.dumps(web_search_results, indent=2)}
+        """
+
+    # ── count before we call the LLM ──────────────────────────────
+    tokens_used = used_tokens(st.session_state.messages, rag_context)
+    pct = min(1.0, tokens_used/CTX_LIMIT)
+    st.sidebar.markdown(f"**Token use:** {tokens_used:,} / {CTX_LIMIT:,}")
+    st.sidebar.progress(pct)
+    if tokens_used > 0.95*CTX_LIMIT:
+        st.warning("⚠️ Within 5 % of Skywork’s context window; answers may be clipped.")
 
     try:
         response = call_llm_api(
