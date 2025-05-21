@@ -63,9 +63,10 @@ CTX_LIMIT = 40_960
 def n_tokens(text: str) -> int:
     return len(ENC.encode(text))
 
-def used_tokens(msgs, rag_context):
-    chat_tokens = sum(n_tokens(m["content"]) for m in msgs)
-    return chat_tokens + n_tokens(rag_context)
+def used_tokens(sys_msg, rag_context):
+    total  = len(ENC.encode(sys_msg))
+    total += len(ENC.encode(rag_context))
+    return total
 
 BACKEND_URL = "http://127.0.0.1:8000/chat"      # or public IP / DNS
 
