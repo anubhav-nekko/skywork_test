@@ -512,7 +512,7 @@ def query_documents_with_page_range(
         """
 
     # ── count before we call the LLM ──────────────────────────────
-    tokens_used = used_tokens(st.session_state.messages, rag_context)
+    tokens_used = used_tokens(system_message, combined_context)
     pct = min(1.0, tokens_used/CTX_LIMIT)
     st.sidebar.markdown(f"**Token use:** {tokens_used:,} / {CTX_LIMIT:,}")
     st.sidebar.progress(pct)
