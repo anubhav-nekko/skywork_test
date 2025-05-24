@@ -233,7 +233,7 @@ def generate_titan_embeddings(text):
 def call_llm_api(system_message, user_query):
     try:
         payload = {"system": system_message, "user": user_query, "max_tokens": 4096}
-        r = requests.post(BACKEND_URL, json=payload, timeout=360)
+        r = requests.post(BACKEND_URL, json=payload, timeout=3600)
         r.raise_for_status()
         return r.json()["answer"]
     
@@ -984,7 +984,7 @@ def main():
             st.session_state.selected_page_ranges = {}
             st.success("Started a new conversation.")
         web_search = st.sidebar.toggle("Enable Web Search")
-        top_k = st.sidebar.slider("Select Top-K Results", min_value=1, max_value=100, value=50, step=1)
+        top_k = st.sidebar.slider("Select Top-K Results", min_value=1, max_value=100, value=20, step=1)
 
         # File and Page Range Selection
         # available_files = list(set([metadata['filename'] for metadata in metadata_store]))
